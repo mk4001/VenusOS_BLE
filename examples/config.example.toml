@@ -1,0 +1,50 @@
+[mqtt]
+enabled = false
+host = "192.168.1.10"
+port = 1883
+username = ""
+password = ""
+client_id = "victron-ble-gateway"
+base_topic = "victron"
+retain = true
+qos = 0
+tls = false
+
+[influxdb]
+enabled = false
+url = "http://192.168.1.12:8086"
+token = "paste-your-influxdb-token-here"
+org = "home"
+bucket = "victron"
+measurement = "victron_ble"
+timeout_ms = 5000
+
+[venus_dbus]
+# Enable this only when running directly on Venus OS.
+enabled = false
+vedbus_path = "/opt/victronenergy/dbus-systemcalc-py/ext/velib_python"
+service_prefix = "com.victronenergy"
+device_instance_start = 42
+product_id = 65535
+connected_timeout_seconds = 180
+
+[bridge]
+publish_metric_topics = true
+publish_json_state = true
+publish_home_assistant_discovery = false
+home_assistant_prefix = "homeassistant"
+offline_after_seconds = 180
+
+[[devices]]
+id = "smartshunt"
+name = "SmartShunt"
+address = "AA:BB:CC:DD:EE:FF"
+advertisement_key = "0123456789abcdef0123456789abcdef"
+device_type = "battery"
+
+[[devices]]
+id = "smartsolar"
+name = "SmartSolar"
+address = "11:22:33:44:55:66"
+advertisement_key = "fedcba9876543210fedcba9876543210"
+device_type = "smartsolar"

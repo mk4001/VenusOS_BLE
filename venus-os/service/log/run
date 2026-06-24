@@ -1,0 +1,2 @@
+#!/bin/sh
+exec multilog t s25000 n20 /var/log/victron-ble-dbus

@@ -1,0 +1,53 @@
+[mqtt]
+enabled = false
+
+[influxdb]
+enabled = false
+
+[venus_dbus]
+enabled = true
+vedbus_path = "/opt/victronenergy/dbus-systemcalc-py/ext/velib_python"
+service_prefix = "com.victronenergy"
+device_instance_start = 42
+product_id = 65535
+connected_timeout_seconds = 180
+
+# Battery monitor / SmartShunt / BMV-like monitor.
+[[devices]]
+id = "smartshunt"
+name = "SmartShunt"
+address = "AA:BB:CC:DD:EE:FF"
+advertisement_key = "paste-your-32-char-advertisement-key-here"
+device_type = "battery"
+
+# Orion XS / DC-DC charger.
+[[devices]]
+id = "orion_xs"
+name = "Orion XS"
+address = "AA:BB:CC:DD:EE:01"
+advertisement_key = "paste-your-32-char-advertisement-key-here"
+device_type = "orion_xs"
+
+# Smart Battery Sense. Uses the battery service with voltage and temperature paths.
+[[devices]]
+id = "smart_battery_sense"
+name = "Smart Battery Sense"
+address = "AA:BB:CC:DD:EE:02"
+advertisement_key = "paste-your-32-char-advertisement-key-here"
+device_type = "battery"
+
+# SmartSolar / MPPT.
+[[devices]]
+id = "smartsolar"
+name = "SmartSolar"
+address = "AA:BB:CC:DD:EE:03"
+advertisement_key = "paste-your-32-char-advertisement-key-here"
+device_type = "smartsolar"
+
+# SmartCharger / AC charger.
+[[devices]]
+id = "smartcharger"
+name = "SmartCharger"
+address = "AA:BB:CC:DD:EE:04"
+advertisement_key = "paste-your-32-char-advertisement-key-here"
+device_type = "smartcharger"

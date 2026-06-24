@@ -1,0 +1,5 @@
+#!/bin/sh
+exec 2>&1
+cd /data/victron-ble-dbus || exit 1
+export PYTHONPATH=/data/victron-ble-dbus/src
+exec python3 -m victron_ble_mqtt_gateway --config /data/victron-ble-dbus/config.toml

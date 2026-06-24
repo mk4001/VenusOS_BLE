@@ -1,0 +1,16 @@
+[Unit]
+Description=Victron BLE MQTT Gateway
+After=network-online.target bluetooth.target
+Wants=network-online.target bluetooth.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/opt/victron-ble-mqtt-gateway
+ExecStart=/opt/victron-ble-mqtt-gateway/.venv/bin/victron-ble-mqtt-gateway --config /etc/victron-ble-mqtt-gateway.toml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
