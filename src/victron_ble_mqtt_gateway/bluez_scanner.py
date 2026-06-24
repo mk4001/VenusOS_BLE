@@ -52,11 +52,23 @@ class BluezVictronScanner:
         )
 
         logger.info("Starting BlueZ LE discovery on %s", self.adapter_path)
-        self.adapter.SetDiscoveryFilter({
-            "Transport": dbus.String("le"),
-            "DuplicateData": dbus.Boolean(True),
-        })
-        self.adapter.StartDiscovery()
+        discovery_filter = dbus.Dictionary(
+            {
+                dbus.String("Transport"): dbus.String("le", variant_level=1),
+                dbus.String("DuplicateData"): dbus.Boolean(True, variant_level=1),
+            },
+            signature="sv",
+        )
+        try:
+            self.adapter.SetDiscoveryFilter(discovery_filter)
+        except Exception as exc:
+            logger.warning("BlueZ SetDiscoveryFilter failed; continuing without discovery filter: %s", exc)
+        try:
+            self.adapter.StartDiscovery()
+        except Exception as exc:
+            logger.warning("BlueZ StartDiscovery failed; continuing with existing BlueZ device events: %s", exc)
+
+        self._scan_existing_bluez_devices()
         self.mainloop = GLib.MainLoop()
         GLib.idle_add(self._log_ready)
         self.mainloop.run()
@@ -69,6 +81,22 @@ class BluezVictronScanner:
                 logger.exception("Failed to stop BlueZ discovery")
         if self.mainloop is not None:
             self.mainloop.quit()
+
+
+    def _scan_existing_bluez_devices(self) -> None:
+        if self.bus is None:
+            return
+        try:
+            manager = dbus.Interface(self.bus.get_object(BLUEZ, "/"), OBJECT_MANAGER_IFACE)
+            objects = manager.GetManagedObjects()
+        except Exception as exc:
+            logger.warning("Failed to read existing BlueZ managed objects: %s", exc)
+            return
+
+        for path, interfaces in objects.items():
+            props = interfaces.get(DEVICE_IFACE)
+            if props:
+                self._handle_device(str(path), props)
 
     def _log_ready(self) -> bool:
         logger.info("Listening for Victron BLE advertisements from %s device(s)", len(self.devices))
