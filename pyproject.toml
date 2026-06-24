@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "victron-ble-mqtt-gateway"
+version = "0.1.0"
+description = "Victron Energy Instant Readout BLE gateway for Venus OS D-Bus, MQTT, and InfluxDB"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "tomli>=2.0.1; python_version < '3.11'",
+]
+
+[project.scripts]
+victron-ble-mqtt-gateway = "victron_ble_mqtt_gateway.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
