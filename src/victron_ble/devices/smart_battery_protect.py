@@ -97,5 +97,9 @@ class SmartBatteryProtect(Device):
             "output_voltage": (
                 output_voltage / 100 if output_voltage != 0xFFFF else None
             ),
-            "off_reason": OffReason(off_reason),
+            "off_reason": (
+                OffReason(off_reason)
+                if off_reason in OffReason._value2member_map_
+                else off_reason
+            ),
         }
