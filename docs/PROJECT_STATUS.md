@@ -10,6 +10,7 @@
 - Dependency-light config parsing for Venus OS environments without `tomllib`/`tomli`.
 - Venus OS 3.70 runit persistence via `/data/rc.local` boot hook.
 - Orion XS unknown `OffReason` fallback to raw integer values.
+- AC charger also published as a `dcsource` DC input (`ac_charger`), so gui-v2 shows it as an "AC charger".
 
 ## Tested Device Classes
 
@@ -18,6 +19,7 @@
 - Smart Battery Sense
 - SmartSolar / MPPT
 - SmartCharger / AC charger
+- SmartCharger as `ac_charger` (charger + `dcsource`/`AcCharger` DC-input view)
 
 ## Next Good Improvements
 

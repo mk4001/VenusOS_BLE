@@ -19,6 +19,7 @@ Supported D-Bus device mappings:
 | Orion XS DC-DC charger | `orion_xs` | `com.victronenergy.dcdc.<id>` | `/Dc/0/*`, `/Dc/In/*`, `/State`, `/ErrorCode` |
 | SmartSolar / MPPT | `smartsolar` | `com.victronenergy.solarcharger.<id>` | `/Dc/0/*`, `/Yield/Power`, `/History/Daily/0/Yield` |
 | SmartCharger / AC charger | `smartcharger` | `com.victronenergy.charger.<id>` | `/Dc/0..2/*`, `/Ac/In/1/Current`, `/Temperature` |
+| SmartCharger as AC-charger DC source | `ac_charger` | `com.victronenergy.charger.<id>` + `com.victronenergy.dcsource.<id>` | As above, plus a `dcsource` service with `/Settings/MonitorMode = -2` (`AcCharger`) so gui-v2 lists it in the DC inputs as an AC charger. |
 
 Other Victron Instant Readout payloads may already parse via the vendored `victron_ble` package, but may need a D-Bus mapping before the Venus GUI can use them properly.
 

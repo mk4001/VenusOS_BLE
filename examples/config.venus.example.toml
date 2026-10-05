@@ -51,3 +51,15 @@ name = "SmartCharger"
 address = "AA:BB:CC:DD:EE:04"
 advertisement_key = "paste-your-32-char-advertisement-key-here"
 device_type = "smartcharger"
+
+# SmartCharger used as an AC charger feeding the battery.
+# "ac_charger" publishes com.victronenergy.charger (as "smartcharger" does) and
+# additionally com.victronenergy.dcsource with MonitorMode = -2
+# (MonitorMode_DcSource_AcCharger), so gui-v2 shows the device in the DC inputs
+# as an "AC charger" instead of only as an inverter/charger.
+[[devices]]
+id = "ac_charger"
+name = "SmartCharger AC"
+address = "AA:BB:CC:DD:EE:05"
+advertisement_key = "paste-your-32-char-advertisement-key-here"
+device_type = "ac_charger"

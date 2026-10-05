@@ -25,8 +25,12 @@ class VenusDbusBridge:
 
     def connect(self) -> None:
         self._load_venus_modules()
+        self.dcsource_by_address = {}
         for index, device in enumerate(self.config.devices):
             self.services_by_address[device.normalized_address] = self._create_service(device, index)
+            if device.device_type == "ac_charger":
+                self.dcsource_by_address[device.normalized_address] = \
+                    self._create_ac_charger_dcsource_service(device, index)
 
         self.GLib.timeout_add_seconds(10, self._check_connected_timeouts)
         self.mainloop = self.GLib.MainLoop()
@@ -44,6 +48,9 @@ class VenusDbusBridge:
         normalized = address.lower()
         service = self.services_by_address[normalized]
         flat = flatten_payload(payload)
+        dcsource = getattr(self, "dcsource_by_address", {}).get(normalized)
+        if dcsource is not None:
+            self._update_ac_charger_dcsource_service(dcsource, flat)
         logger.info("Updating Venus D-Bus service for %s with %s", normalized, flat)
         self._update_battery_service(normalized, service, flat, rssi)
 
@@ -68,6 +75,9 @@ class VenusDbusBridge:
         if device.device_type in ("smartsolar", "solar_charger", "solarcharger", "mppt"):
             return self._create_solar_charger_service(device, index)
         if device.device_type in ("smartcharger", "ac_charger", "charger"):
+            # The charger service itself. For "ac_charger" an additional .dcsource
+            # service is published from connect(), so gui-v2 shows the device in the
+            # DC inputs with an "AC charger" meter type.
             return self._create_ac_charger_service(device, index)
         return self._create_battery_service(device, index)
 
@@ -166,6 +176,24 @@ class VenusDbusBridge:
         service.add_path("/Dc/2/Power", None)
         return service
 
+    def _create_ac_charger_dcsource_service(self, device: DeviceConfig, index: int) -> Any:
+        # An AC charger that feeds the battery is also a DC source. Publishing it as
+        # com.victronenergy.dcsource with MonitorMode -2 (MonitorMode_DcSource_AcCharger)
+        # lets gui-v2 show it in the DC inputs as an "AC charger", instead of only
+        # appearing as an inverter/charger.
+        service_name = f"{self.config.venus_dbus.service_prefix}.dcsource.{clean_topic_part(device.id)}"
+        # +500 keeps the device instance distinct from the .charger service.
+        device_instance = self.config.venus_dbus.device_instance_start + 500 + index
+        service = self._new_service(service_name)
+        self._add_common_paths(service, device, device_instance)
+        service.add_path("/DeviceType", "dcsource")
+        service.add_path("/Settings/MonitorMode", -2)
+        service.add_path("/Dc/0/Voltage", None)
+        service.add_path("/Dc/0/Current", None)
+        service.add_path("/Dc/0/Power", None)
+        service.add_path("/Dc/0/Temperature", None)
+        return service
+
     def _check_connected_timeouts(self) -> bool:
         now = time.monotonic()
         timeout = max(1, int(self.config.venus_dbus.connected_timeout_seconds))
@@ -175,6 +203,9 @@ class VenusDbusBridge:
                 if service["/Connected"] != 0:
                     logger.warning("No BLE advertisement from %s for %ss; marking disconnected", address, timeout)
                 service["/Connected"] = 0
+                dcsource = getattr(self, "dcsource_by_address", {}).get(address)
+                if dcsource is not None:
+                    dcsource["/Connected"] = 0
         return True
 
     def _update_battery_service(self, address: str, service: Any, flat: dict[str, Any], rssi: Optional[int]) -> bool:
@@ -192,7 +223,20 @@ class VenusDbusBridge:
             self._update_battery_monitor_service(service, flat)
 
         service["/Connected"] = 1
+        dcsource = getattr(self, "dcsource_by_address", {}).get(address)
+        if dcsource is not None:
+            dcsource["/Connected"] = 1
         return False
+
+    def _update_ac_charger_dcsource_service(self, service: Any, flat: dict[str, Any]) -> None:
+        voltage = _first_number(flat, "output_voltage1")
+        current = _first_number(flat, "output_current1")
+        if voltage is not None:
+            service["/Dc/0/Voltage"] = round(voltage, 3)
+        if current is not None:
+            service["/Dc/0/Current"] = round(current, 3)
+        if voltage is not None and current is not None:
+            service["/Dc/0/Power"] = round(voltage * current, 3)
 
     def _update_battery_monitor_service(self, service: Any, flat: dict[str, Any]) -> None:
         voltage = _first_number(flat, "voltage", "battery_voltage", "dc_0_voltage")
