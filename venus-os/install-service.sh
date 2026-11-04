@@ -33,26 +33,23 @@ exit 0
 
   tmp="$RC_LOCAL.tmp.$$"
   awk -v begin="$MARK_BEGIN" -v end="$MARK_END" -v service_link="$SERVICE_LINK" -v service_dir="$SERVICE_DIR" -v service_name="$SERVICE_NAME" '
-    /^exit 0[[:space:]]*$/ && !inserted {
+    function print_hook() {
       print begin
       print "mkdir -p /var/log/" service_name
-      print "if [ ! -e "" service_link "" ]; then"
-      print "  ln -s "" service_dir "" "" service_link """
+      print "if [ ! -e \"" service_link "\" ]; then"
+      print "  ln -s \"" service_dir "\" \"" service_link "\""
       print "fi"
-      print "svc -u "" service_link "" 2>/dev/null || true"
+      print "svc -u \"" service_link "\" 2>/dev/null || true"
       print end
+    }
+    /^exit 0[[:space:]]*$/ && !inserted {
+      print_hook()
       inserted=1
     }
     { print }
     END {
       if (!inserted) {
-        print begin
-        print "mkdir -p /var/log/" service_name
-        print "if [ ! -e "" service_link "" ]; then"
-        print "  ln -s "" service_dir "" "" service_link """
-        print "fi"
-        print "svc -u "" service_link "" 2>/dev/null || true"
-        print end
+        print_hook()
       }
     }
   ' "$RC_LOCAL" > "$tmp"
