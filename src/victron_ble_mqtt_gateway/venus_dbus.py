@@ -152,7 +152,7 @@ class VenusDbusBridge:
         service.add_path("/Mode", 1)
         service.add_path("/State", None)
         service.add_path("/ErrorCode", None)
-        service.add_path("/NrOfOutputs", 3)
+        service.add_path("/NrOfOutputs", 1)
         service.add_path("/Temperature", None)
         service.add_path("/Ac/In/1/Current", None)
         service.add_path("/Dc/0/Voltage", None)
@@ -278,6 +278,7 @@ class VenusDbusBridge:
         if ac_current is not None:
             service["/Ac/In/1/Current"] = round(ac_current, 3)
 
+        outputs = 0
         for index in range(3):
             output_number = index + 1
             voltage = _first_number(flat, f"output_voltage{output_number}")
@@ -285,10 +286,16 @@ class VenusDbusBridge:
             base_path = f"/Dc/{index}"
             if voltage is not None:
                 service[f"{base_path}/Voltage"] = round(voltage, 3)
+                outputs = output_number
             if current is not None:
                 service[f"{base_path}/Current"] = round(current, 3)
             if voltage is not None and current is not None:
                 service[f"{base_path}/Power"] = round(voltage * current, 3)
+
+        # Single-output chargers report outputs 2 and 3 as "not available", so
+        # count the outputs that actually carry a voltage.
+        if outputs and service["/NrOfOutputs"] != outputs:
+            service["/NrOfOutputs"] = outputs
 
 
     def _update_orion_xs_service(self, service: Any, flat: dict[str, Any]) -> None:
