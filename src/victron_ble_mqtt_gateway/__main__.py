@@ -54,9 +54,10 @@ async def run(config_path: Path) -> None:
             pass
 
     bridge.connect()
-    await scanner.start()
     try:
-        await stop_event.wait()
+        await scanner.start()
+        if not getattr(scanner, "runs_until_stopped", False):
+            await stop_event.wait()
     finally:
         await scanner.stop()
         bridge.close()
