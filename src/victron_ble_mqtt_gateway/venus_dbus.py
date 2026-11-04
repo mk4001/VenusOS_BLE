@@ -4,7 +4,10 @@ import logging
 import sys
 import threading
 import time
+from enum import Enum
 from typing import Any, Optional
+
+from victron_ble.devices.base import ChargerError, OperationMode
 
 from .config import AppConfig, DeviceConfig
 from .topics import clean_topic_part, flatten_payload
@@ -252,7 +255,7 @@ class VenusDbusBridge:
         if state is not None:
             service["/State"] = _state_to_dbus_value(state)
         if error is not None:
-            service["/ErrorCode"] = _enum_or_value(error)
+            service["/ErrorCode"] = _error_to_dbus_value(error)
 
 
     def _update_ac_charger_service(self, service: Any, flat: dict[str, Any]) -> None:
@@ -272,7 +275,7 @@ class VenusDbusBridge:
         if state is not None:
             service["/State"] = _state_to_dbus_value(state)
         if error is not None:
-            service["/ErrorCode"] = _enum_or_value(error)
+            service["/ErrorCode"] = _error_to_dbus_value(error)
         if temperature is not None:
             service["/Temperature"] = round(temperature, 2)
         if ac_current is not None:
@@ -325,7 +328,7 @@ class VenusDbusBridge:
         if state is not None:
             service["/State"] = _state_to_dbus_value(state)
         if error is not None:
-            service["/ErrorCode"] = _enum_or_value(error)
+            service["/ErrorCode"] = _error_to_dbus_value(error)
         if off_reason is not None:
             service["/DeviceOffReason"] = _enum_or_value(off_reason)
 
@@ -354,19 +357,31 @@ def _enum_or_value(value: Any) -> Any:
     return value
 
 
-def _state_to_dbus_value(value: Any) -> Any:
+def _enum_to_dbus_value(enum_class: type[Enum], value: Any) -> Optional[int]:
+    # Payloads reach the bridge with enums already turned into lower-case names
+    # by DeviceDataEncoder. Venus OS expects the numeric code on /State and
+    # /ErrorCode, so map the name back through the enum it came from.
+    if isinstance(value, Enum):
+        return value.value
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
     if isinstance(value, str):
-        mapping = {
-            "off": 0,
-            "fault": 2,
-            "bulk": 3,
-            "absorption": 4,
-            "float": 5,
-            "storage": 6,
-            "power_supply": 11,
-        }
-        return mapping.get(value.lower(), value)
-    enum_value = getattr(value, "value", None)
-    if enum_value is not None:
-        return enum_value
-    return value
+        try:
+            return enum_class[value.upper()].value
+        except KeyError:
+            pass
+        try:
+            return int(value)
+        except ValueError:
+            logger.warning("Unknown %s value %r; leaving path invalid", enum_class.__name__, value)
+    return None
+
+
+def _state_to_dbus_value(value: Any) -> Optional[int]:
+    return _enum_to_dbus_value(OperationMode, value)
+
+
+def _error_to_dbus_value(value: Any) -> Optional[int]:
+    return _enum_to_dbus_value(ChargerError, value)
