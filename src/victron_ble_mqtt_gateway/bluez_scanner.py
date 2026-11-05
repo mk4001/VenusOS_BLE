@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import signal
 from typing import Any
 
 import dbus
@@ -24,6 +25,9 @@ VICTRON_COMPANY_ID = 0x02E1
 
 
 class BluezVictronScanner:
+    # start() runs the GLib main loop itself and returns only once stopped.
+    runs_until_stopped = True
+
     def __init__(self, devices: list[DeviceConfig], bridge: MultiBridge, adapter_path: str = "/org/bluez/hci0") -> None:
         self.devices = {device.normalized_address: device for device in devices}
         self.bridge = bridge
@@ -71,7 +75,19 @@ class BluezVictronScanner:
         self._scan_existing_bluez_devices()
         self.mainloop = GLib.MainLoop()
         GLib.idle_add(self._log_ready)
+        # The GLib main loop blocks the asyncio loop, so asyncio's signal
+        # handlers never run while it does. Handle SIGINT/SIGTERM here and
+        # return once the loop stops, so supervisors like daemontools can stop
+        # the service.
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            GLib.unix_signal_add(GLib.PRIORITY_HIGH, sig, self._quit_on_signal, sig)
         self.mainloop.run()
+
+    def _quit_on_signal(self, sig: int) -> bool:
+        logger.info("Received signal %s; stopping", sig)
+        if self.mainloop is not None:
+            self.mainloop.quit()
+        return False
 
     async def stop(self) -> None:
         if self.adapter is not None:
