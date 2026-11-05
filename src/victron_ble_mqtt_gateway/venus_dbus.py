@@ -26,7 +26,12 @@ class VenusDbusBridge:
     def connect(self) -> None:
         self._load_venus_modules()
         for index, device in enumerate(self.config.devices):
-            self.services_by_address[device.normalized_address] = self._create_service(device, index)
+            service = self._create_service(device, index)
+            if getattr(service, "_register_later", False):
+                # Claim the bus name only once every path exists, so other
+                # Venus services never see a half-built device.
+                service.register()
+            self.services_by_address[device.normalized_address] = service
 
         self.GLib.timeout_add_seconds(10, self._check_connected_timeouts)
         self.mainloop = self.GLib.MainLoop()
@@ -75,8 +80,16 @@ class VenusDbusBridge:
         # dbus.SystemBus() returns a shared connection. Multiple VeDbusService
         # instances on that connection collide on object path '/'. Use a private
         # connection per service so battery/dcdc/etc can coexist in one process.
+        bus = self.dbus.SystemBus(private=True)
         try:
-            return self.VeDbusService(service_name, bus=self.dbus.SystemBus(private=True))
+            # Current velib_python: register explicitly after adding the paths.
+            service = self.VeDbusService(service_name, bus=bus, register=False)
+            service._register_later = True
+            return service
+        except TypeError:
+            pass
+        try:
+            return self.VeDbusService(service_name, bus=bus)
         except TypeError:
             logger.warning("VeDbusService does not accept a bus parameter; falling back to shared bus")
             return self.VeDbusService(service_name)
